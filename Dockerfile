@@ -25,4 +25,4 @@ COPY . .
 EXPOSE 3000
 
 # Define the command that will be executed when the container starts.
-CMD [ "node", "server.js" ]
+CMD [ "node", "index.js" ]
