@@ -1,0 +1,8 @@
+#video-title {
+    text-align: center;
+}
+
+.thumbnail-img {
+    max-width: 320px;
+    border: 1px solid #dee2e6;
+}
