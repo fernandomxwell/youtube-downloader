@@ -1,0 +1,15 @@
+{
+	"errors": {
+		"400": {
+			"exists": "{{name}} already exists!",
+			"invalid": "Invalid {{name}}!",
+			"verified": "{{name}} already verified!",
+			"limit": "{{name}} limit has been reached, please try again later!"
+		},
+		"401": "Unauthorize!",
+		"403": "Forbidden!",
+		"404": "Page not found!",
+		"422": "Invalid request!",
+		"500": "Something went wrong!"
+	}
+}
