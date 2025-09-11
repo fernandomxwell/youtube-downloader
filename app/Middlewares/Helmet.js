@@ -8,6 +8,7 @@ module.exports = app => {
                 ...helmet.contentSecurityPolicy.getDefaultDirectives(),
                 "connect-src": ["'self'", "https://cdn.jsdelivr.net"],
                 "img-src": ["'self'", "data:", "https://i.ytimg.com"],
+                "script-src": ["'self'", "https://cdn.jsdelivr.net"],
             },
         }
     };

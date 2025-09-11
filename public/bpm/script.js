@@ -8,6 +8,14 @@ const loadingFilename = document.getElementById('loading-filename');
 const resultFilename = document.getElementById('result-filename');
 const resetButton = document.getElementById('reset-button');
 const notificationArea = document.getElementById('notification-area');
+const chooseFileButton = document.getElementById('choose-file-button');
+const audioFileInput = document.getElementById('audio-file-input');
+
+if (chooseFileButton && audioFileInput) {
+    chooseFileButton.addEventListener('click', () => {
+        audioFileInput.click();
+    });
+}
 
 let audioContext;
 

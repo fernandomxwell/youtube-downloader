@@ -5,6 +5,8 @@ const ytdl = require('ytdl-core');
 const videoInfoResource = require(basepath.resource + '/YoutubeDownloader/VideoInfoResource');
 const prepareDownloadResource = require(basepath.resource + '/YoutubeDownloader/PrepareDownloadResource');
 
+const tempDir = path.join(basepath.storage, 'temp');
+
 exports.getVideoInfo = async (req, res) => {
     try {
         const result = await ytdl.getInfo(req.body.url);
@@ -19,12 +21,11 @@ exports.prepareDownload = async (req, res) => {
     try {
         const { url, videoItag, audioItag, type, title } = req.body;
 
-        const tempDir = path.join(basepath.storage, 'temp');
+        const now = Date.now();
+
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir);
         }
-
-        const now = Date.now();
 
         const outputFilename = `${title}_${now}.${type}`;
         const outputPath = path.join(tempDir, outputFilename);
@@ -54,10 +55,8 @@ exports.prepareDownload = async (req, res) => {
             });
 
             // Clean up temporary video/audio files
-            await Promise.all([
-                fs.unlink(videoPath),
-                fs.unlink(audioPath)
-            ]);
+            fs.unlinkSync(videoPath);
+            fs.unlinkSync(audioPath);
         }
 
         // Send back the link to the prepared file
@@ -69,7 +68,18 @@ exports.prepareDownload = async (req, res) => {
 
 exports.downloadFile = async (req, res) => {
     try {
-        // 
+        const filePath = path.join(tempDir, req.params.filename);
+        if (fs.existsSync(filePath)) {
+            res.download(filePath, (err) => {
+                if (err) console.error(err);
+                // Cleanup the final merged file after sending it
+                fs.unlink(filePath, (unlinkErr) => {
+                    if (unlinkErr) console.error(unlinkErr);
+                });
+            });
+        } else {
+            res.status(404).send('File not found or has already been downloaded.');
+        }
     } catch (error) {
         return res.defaultError(error.stack);
     }
