@@ -3,8 +3,7 @@
 		"400": {
 			"exists": "{{name}} already exists!",
 			"invalid": "Invalid {{name}}!",
-			"verified": "{{name}} already verified!",
-			"limit": "{{name}} limit has been reached, please try again later!"
+			"verified": "{{name}} already verified!"
 		},
 		"401": "Unauthorize!",
 		"403": "Forbidden!",

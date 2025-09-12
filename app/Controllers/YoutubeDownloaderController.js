@@ -2,8 +2,8 @@ const ffmpeg = require('fluent-ffmpeg');
 const ytdl = require('ytdl-core');
 
 // API Resource
-const videoInfoResource = require(basepath.resource + '/YoutubeDownloader/VideoInfoResource');
-const prepareDownloadResource = require(basepath.resource + '/YoutubeDownloader/PrepareDownloadResource');
+const videoInfoResource = require(path.join(basepath.resource, 'YoutubeDownloader', 'VideoInfoResource'));
+const prepareDownloadResource = require(path.join(basepath.resource, 'YoutubeDownloader', 'PrepareDownloadResource'));
 
 const tempDir = path.join(basepath.storage, 'temp');
 
@@ -78,7 +78,7 @@ exports.downloadFile = async (req, res) => {
                 });
             });
         } else {
-            res.status(404).send('File not found or has already been downloaded.');
+            return res.error(res.__('errors.404'), 404);
         }
     } catch (error) {
         return res.defaultError(error.stack);

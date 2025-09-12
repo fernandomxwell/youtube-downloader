@@ -1,5 +1,5 @@
 // --- CONFIG ---
-const API_ENDPOINT = 'http://localhost:3000/generate-video';
+const API_ENDPOINT = 'http://localhost:3000/api/karaoke-maker/generate-video';
 
 // --- STATE MANAGEMENT ---
 let images = [];

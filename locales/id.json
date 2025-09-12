@@ -3,8 +3,7 @@
         "400": {
             "exists": "{{name}} sudah terdaftar!",
             "invalid": "{{name}} tidak valid!",
-            "verified": "{{name}} sudah terverifikasi!",
-            "limit": "Batas {{name}} telah tercapai, silakan coba lagi nanti!"
+            "verified": "{{name}} sudah terverifikasi!"
         },
         "401": "Tidak ada otorisasi!",
         "403": "Tidak ada akses!",
