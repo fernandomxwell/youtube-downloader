@@ -6,7 +6,7 @@ FROM node:lts-slim
 WORKDIR /usr/src/app
 
 # Install FFmpeg using Debian's package manager (apt-get).
-# We first update the package list, then install ffmpeg, and finally clean up.
+# Update the package list first, then install ffmpeg, and finally clean up.
 RUN apt-get update && \
     apt-get install -y ffmpeg --no-install-recommends && \
     apt-get clean && \
@@ -24,5 +24,8 @@ COPY . .
 # Expose port 3000 to allow communication with the app from outside the container.
 EXPOSE 3000
 
-# Define the command that will be executed when the container starts.
-CMD [ "node", "index.js" ]
+# Ensure shell scripts are executable
+RUN chmod +x run*.sh
+
+# Run the appropriate script
+CMD ["bash", "-c", "./run${APP_ENV}.sh"]
