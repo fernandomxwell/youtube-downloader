@@ -1,12 +1,6 @@
 require('dotenv').config();
 
 module.exports = {
-    // For pagination
-    pagination: {
-        per_page: 15,
-        page: 1,
-    },
-
     // For validation
     validation: {
         max_keyword_size: 255,

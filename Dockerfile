@@ -24,8 +24,5 @@ COPY . .
 # Expose port 3000 to allow communication with the app from outside the container.
 EXPOSE 3000
 
-# Ensure shell scripts are executable
-RUN chmod +x run*.sh
-
-# Run the appropriate script
-CMD ["bash", "-c", "./run${APP_ENV}.sh"]
+# Define the command that will be executed when the container starts.
+CMD [ "node", "index.js" ]
