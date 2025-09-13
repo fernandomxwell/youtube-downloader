@@ -3,7 +3,7 @@ const helmet = require('helmet');
 module.exports = app => {
     // https://www.npmjs.com/package/helmet
     const options = {
-        crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+        crossOriginOpenerPolicy: false,
 
         contentSecurityPolicy: {
             directives: {
