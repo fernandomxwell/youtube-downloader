@@ -13,5 +13,4 @@ global.dirname = __dirname;
 // Initiate
 require('./bootstrap')(app);
 
-// Run the Application
 app.listen(port, () => console.log(`Server is running on http://localhost:${port}!`));

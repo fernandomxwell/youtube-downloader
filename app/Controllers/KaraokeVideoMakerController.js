@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+const ffmpeg = require('fluent-ffmpeg');
 
 // Libraries
 const { toSrtTime } = require(path.join(basepath.library, 'Time'));
@@ -17,14 +17,13 @@ exports.generateKaraokeVideo = async (req, res) => {
         }
         fs.mkdirSync(requestPath);
 
-        // Middleware to handle file uploads for this specific request
         req.uploadPath = requestPath;
         const uploader = upload.fields([{ name: 'images' }, { name: 'audio', maxCount: 1 }]);
 
         uploader(req, res, async (err) => {
             if (err) {
                 console.error("Upload error:", err);
-                return res.status(500).send('File upload failed.');
+                return res.defaultError(err.stack);
             }
 
             try {
@@ -43,80 +42,65 @@ exports.generateKaraokeVideo = async (req, res) => {
                 }).join('\n');
                 fs.writeFileSync(srtPath, srtContent);
 
-                // Pre-process each image using absolute paths
+                // Stage 1 - Pre-process each image using absolute paths
                 const conversionPromises = imageFiles.map((image, index) => {
                     return new Promise((resolve, reject) => {
                         const inputImagePath = path.join(requestPath, image.filename);
-                        const outputClipName = `clip_${index}.ts`;
-                        const outputClipPath = path.join(requestPath, outputClipName);
+                        const outputClipPath = path.join(requestPath, `clip_${index}.ts`);
 
-                        const convertCmd = `ffmpeg -loop 1 -i "${inputImagePath}" -vf "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p,fps=30" -c:v libx264 -t ${slideDuration} -y "${outputClipPath}"`;
-
-                        exec(convertCmd, (error, stdout, stderr) => {
-                            if (error) {
-                                console.error(`Error converting ${image.filename}:`, stderr);
-                                return reject(error);
-                            }
-                            resolve(outputClipPath); // Resolve with the full path to the new clip
-                        });
+                        ffmpeg(inputImagePath)
+                            .loop(slideDuration)
+                            .videoFilters([
+                                'scale=1280:720:force_original_aspect_ratio=decrease',
+                                'pad=1280:720:(ow-iw)/2:(oh-ih)/2',
+                                'format=yuv420p',
+                                'fps=30'
+                            ])
+                            .videoCodec('libx264')
+                            .on('end', () => resolve(outputClipPath))
+                            .on('error', (err) => reject(err))
+                            .save(outputClipPath);
                     });
                 });
 
-                // Wait for all images to be converted into clips
-                Promise.all(conversionPromises)
-                    .then(clipPaths => {
-                        // Create a new input file listing the absolute paths to the generated video clips
-                        const clipListContent = clipPaths.map(p => `file '${p}'`).join('\n');
-                        const clipListPath = path.join(requestPath, 'clips.txt');
-                        fs.writeFileSync(clipListPath, clipListContent);
+                const clipPaths = await Promise.all(conversionPromises);
 
-                        // FFMpeg Command: Part 1 - Concatenate the pre-processed clips
-                        const silentVideoFilename = 'slideshow.mp4';
-                        const silentVideoPath = path.join(requestPath, silentVideoFilename);
-                        const concatCmd = `ffmpeg -f concat -safe 0 -i "${clipListPath}" -c copy -y "${silentVideoPath}"`;
+                // --- Stage 2: Concatenate clips into a silent slideshow ---
+                const silentVideoPath = path.join(requestPath, 'slideshow.mp4');
+                const merger = ffmpeg();
+                clipPaths.forEach(clip => merger.input(clip));
 
-                        console.log(concatCmd);
+                merger.on('end', () => {
+                    // --- Stage 3: Combine slideshow, audio, and subtitles ---
+                    const finalVideoPath = path.join(requestPath, 'output.mp4');
+                    const audioFilePath = path.join(requestPath, audioFile.filename);
 
-                        console.log('Running FFMpeg command 1 (Concat)...');
-                        exec(concatCmd, (error1, stdout1, stderr1) => {
-                            if (error1) {
-                                console.error('FFMpeg Error (Part 1 - Concat):', stderr1);
-                                return res.status(500).send('Failed to generate video slideshow.');
-                            }
-
-                            // FFMpeg Command: Part 2 - Combine video, audio, and subtitles
-                            const audioFilePath = path.join(requestPath, audioFile.filename);
-                            const finalVideoFilename = 'output.mp4';
-                            const finalVideoPath = path.join(requestPath, finalVideoFilename);
-                            // The subtitles filter can be sensitive; using an absolute path is best.
-                            const subtitlesFilter = `subtitles='${srtPath}'`;
-                            const ffmpegCmd2 = `ffmpeg -i "${silentVideoPath}" -i "${audioFilePath}" -vf "${subtitlesFilter}" -c:v libx264 -c:a aac -b:a 192k -shortest -y "${finalVideoPath}"`;
-
-                            console.log('Slideshow created. Running FFMpeg command 2 (Combine)...');
-                            exec(ffmpegCmd2, (error2, stdout2, stderr2) => {
-                                if (error2) {
-                                    console.error('FFMpeg Error (Part 2):', stderr2);
-                                    return res.status(500).send('Failed to combine video, audio, and lyrics.');
-                                }
-                                console.log('Final video created. Sending to client.');
-
-                                res.download(finalVideoPath, 'karaoke.mp4', (err) => {
-                                    console.log('Cleaning up temporary files...');
-                                    fs.rm(requestPath, { recursive: true, force: true }, (rmErr) => {
-                                        if (rmErr) console.error(`Error cleaning up directory ${requestPath}:`, rmErr);
-                                    });
+                    ffmpeg(silentVideoPath)
+                        .input(audioFilePath)
+                        .videoCodec('libx264')
+                        .audioCodec('aac')
+                        .audioBitrate('192k')
+                        .outputOptions('-vf', `subtitles='${srtPath}'`)
+                        .outputOptions('-shortest') // Ensure video ends with the shortest input (audio)
+                        .on('end', () => {
+                            res.download(finalVideoPath, 'karaoke.mp4', (err) => {
+                                fs.rm(requestPath, { recursive: true, force: true }, (rmErr) => {
+                                    if (rmErr) console.error(`Error cleaning up directory ${requestPath}:`, rmErr);
                                 });
                             });
-                        });
-                    })
-                    .catch(error => {
-                        console.error("Image pre-processing failed:", error);
-                        res.status(500).send('Failed to process one or more images.');
-                    });
-
-            } catch (e) {
-                console.error("Processing error:", e);
-                res.status(500).send('An error occurred on the server.');
+                        })
+                        .on('error', (error) => {
+                            console.error('FFMpeg Error (Stage 3):', error.message);
+                            return res.defaultError(err.stack);
+                        })
+                        .save(finalVideoPath);
+                }).on('error', (error) => {
+                    console.error('FFMpeg Error (Stage 2 - Concat):', error.message);
+                    return res.defaultError(error.stack);
+                }).mergeToFile(silentVideoPath, requestPath);
+            } catch (error) {
+                console.error("Processing error:", error);
+                return res.defaultError(error.stack);
             }
         });
     } catch (error) {

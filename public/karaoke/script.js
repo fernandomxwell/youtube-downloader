@@ -1,14 +1,9 @@
-// --- CONFIG ---
-const API_ENDPOINT = 'http://localhost:3000/api/karaoke-maker/generate-video';
-
-// --- STATE MANAGEMENT ---
 let images = [];
 let audioFile = null;
 let lyrics = []; // { text: "...", startTime: null, endTime: null }
 let currentLyricIndex = 0;
 let isMarkingStart = true;
 
-// --- DOM ELEMENTS ---
 const step1Div = document.getElementById('step1');
 const step2Div = document.getElementById('step2');
 const step3Div = document.getElementById('step3');
@@ -27,7 +22,6 @@ const progressLog = document.getElementById('progressLog');
 const resultDiv = document.getElementById('result');
 const downloadLink = document.getElementById('downloadLink');
 
-// --- STEP NAVIGATION ---
 function updateStepIndicator(step) {
     document.querySelectorAll('.step-indicator').forEach((el, index) => {
         const circle = el.querySelector('div');
@@ -59,7 +53,6 @@ goToStep2Btn.addEventListener('click', () => {
 goToStep3Btn.addEventListener('click', () => navigateToStep(3));
 backToStep1Btn.addEventListener('click', () => navigateToStep(1));
 
-// --- INPUT VALIDATION ---
 function validateStep1() {
     const allValid = images.length > 0 && audioFile && lyricsUpload.value.trim().length > 0;
     goToStep2Btn.disabled = !allValid;
@@ -181,13 +174,13 @@ generateBtn.addEventListener('click', async () => {
     formData.append('duration', audioPlayer.duration);
 
     try {
-        const response = await fetch(API_ENDPOINT, {
+        const response = await fetch('/api/karaoke-maker/generate-video', {
             method: 'POST',
             body: formData
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = (await response.json()).message;
             throw new Error(`Server error: ${errorText}`);
         }
 
@@ -211,5 +204,4 @@ generateBtn.addEventListener('click', async () => {
     }
 });
 
-// Initialize first step
 navigateToStep(1);

@@ -1,5 +1,6 @@
 .env
 node_modules
-storage
+storage/*
+*.pem
 Dockerfile
 .dockerignore

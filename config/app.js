@@ -4,7 +4,7 @@ module.exports = {
     // For validation
     validation: {
         max_keyword_size: 255,
-        max_post_size: '16mb',
+        max_post_size: '32mb',
         min_password_length: 8,
     },
 

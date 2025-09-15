@@ -51,7 +51,14 @@ exports.prepareDownload = async (req, res) => {
             await Promise.all([downloadVideo, downloadAudio]);
 
             await new Promise((resolve, reject) => {
-                ffmpeg().input(videoPath).input(audioPath).outputOptions('-c:v copy').outputOptions('-c:a aac').save(outputPath).on('end', resolve).on('error', reject);
+                ffmpeg()
+                    .input(videoPath)
+                    .input(audioPath)
+                    .outputOptions('-c:v copy')
+                    .outputOptions('-c:a aac')
+                    .save(outputPath)
+                    .on('end', resolve)
+                    .on('error', reject);
             });
 
             // Clean up temporary video/audio files

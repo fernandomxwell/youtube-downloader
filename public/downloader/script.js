@@ -26,7 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
         processingMessage.textContent = '';
 
         try {
-            const response = await fetch('/api/youtube-downloader/video-info', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+            const response = await fetch('/api/youtube-downloader/video-info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ url })
+            });
             if (!response.ok) throw new Error((await response.json()).message || 'Failed to fetch video info.');
             const result = await response.json();
             const data = result.data; // unwrap resource
@@ -70,7 +76,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const response = await fetch('/api/youtube-downloader/prepare-download', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const response = await fetch('/api/youtube-downloader/prepare-download', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
             if (!response.ok) throw new Error((await response.json()).message || 'Server failed to prepare file.');
             const result = await response.json();
             const data = result.data; // unwrap resource
