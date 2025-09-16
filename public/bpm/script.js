@@ -1,13 +1,14 @@
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('audio-file-input');
-const initialState = document.getElementById('initial-state');
-const loadingState = document.getElementById('loading-state');
-const resultState = document.getElementById('result-state');
-const bpmResult = document.getElementById('bpm-result');
-const loadingFilename = document.getElementById('loading-filename');
-const resultFilename = document.getElementById('result-filename');
-const resetButton = document.getElementById('reset-button');
-const notificationArea = document.getElementById('notification-area');
+// --- DOM Element Selection ---
+const initialState = document.getElementById("initial-state");
+const loadingState = document.getElementById("loading-state");
+const resultState = document.getElementById("result-state");
+const dropZone = document.getElementById("drop-zone");
+const fileInput = document.getElementById("audio-file-input");
+const loadingFilename = document.getElementById("loading-filename");
+const bpmResult = document.getElementById("bpm-result");
+const resultFilename = document.getElementById("result-filename");
+const resetButton = document.getElementById("reset-button");
+const notificationArea = document.getElementById("notification-area");
 const chooseFileButton = document.getElementById('choose-file-button');
 const audioFileInput = document.getElementById('audio-file-input');
 
@@ -17,228 +18,251 @@ if (chooseFileButton && audioFileInput) {
     });
 }
 
-let audioContext;
+// --- Event Listeners ---
+dropZone.addEventListener("dragover", handleDragOver);
+dropZone.addEventListener("dragleave", handleDragLeave);
+dropZone.addEventListener("drop", handleDrop);
+fileInput.addEventListener("change", handleFileSelect);
+resetButton.addEventListener("click", resetUI);
 
-dropZone.addEventListener('dragover', (e) => {
+// --- Event Handlers ---
+function handleDragOver(e) {
     e.preventDefault();
-    dropZone.classList.add('drop-zone--over');
-});
+    e.stopPropagation();
+    dropZone.classList.add("dragging");
+}
 
-dropZone.addEventListener('dragleave', (e) => {
+function handleDragLeave(e) {
     e.preventDefault();
-    dropZone.classList.remove('drop-zone--over');
-});
+    e.stopPropagation();
+    dropZone.classList.remove("dragging");
+}
 
-dropZone.addEventListener('drop', (e) => {
+function handleDrop(e) {
     e.preventDefault();
-    dropZone.classList.remove('drop-zone--over');
+    e.stopPropagation();
+    dropZone.classList.remove("dragging");
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type === 'audio/mpeg') {
+    if (files.length) {
         handleFile(files[0]);
-    } else {
-        showNotification('Please drop a valid MP3 file.');
     }
-});
-
-fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
-        handleFile(e.target.files[0]);
-    }
-});
-
-resetButton.addEventListener('click', () => {
-    resultState.classList.add('d-none');
-    initialState.classList.remove('d-none');
-    fileInput.value = ''; // Reset file input
-    notificationArea.innerHTML = ''; // Clear notifications
-});
-
-function initializeAudioContext() {
-    if (!audioContext) {
-        try {
-            window.AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioContext = new AudioContext();
-        } catch (e) {
-            showNotification('Web Audio API is not supported in this browser.');
-            return false;
-        }
-    }
-    return true;
 }
 
-function handleFile(file) {
-    if (!initializeAudioContext()) return;
-    if (!file) return;
-
-    // Update UI to loading state
-    initialState.classList.add('d-none');
-    resultState.classList.add('d-none');
-    loadingState.classList.remove('d-none');
-    loadingFilename.textContent = file.name;
-    notificationArea.innerHTML = ''; // Clear old notifications
-
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-        const arrayBuffer = e.target.result;
-        audioContext.decodeAudioData(arrayBuffer, (buffer) => {
-            processAudioBuffer(buffer, file.name);
-        }, (error) => {
-            console.error('Error decoding audio data:', error);
-            showNotification('Could not decode the audio file. It might be corrupted.');
-            resetToInitialState();
-        });
-    };
-
-    reader.onerror = (e) => {
-        console.error('FileReader error:', e);
-        showNotification('An error occurred while reading the file.');
-        resetToInitialState();
-    };
-
-    reader.readAsArrayBuffer(file);
+function handleFileSelect(e) {
+    const files = e.target.files;
+    if (files.length) {
+        handleFile(files[0]);
+    }
 }
 
-function resetToInitialState() {
-    loadingState.classList.add('d-none');
-    resultState.classList.add('d-none');
-    initialState.classList.remove('d-none');
+// --- UI Functions ---
+function showLoading(filename) {
+    initialState.classList.add("d-none");
+    resultState.classList.add("d-none");
+    loadingState.classList.remove("d-none");
+    loadingFilename.textContent = filename;
 }
 
-function processAudioBuffer(buffer, fileName) {
-    // The core BPM detection logic
-    getTempo(buffer).then((tempo) => {
-        if (tempo === 0) {
-            showNotification('Could not determine a confident tempo. The song might be too complex or have an irregular beat.');
-            resetToInitialState();
-            return;
-        }
-        // Update UI with result
-        loadingState.classList.add('d-none');
-        resultState.classList.remove('d-none');
-        bpmResult.textContent = Math.round(tempo);
-        resultFilename.textContent = fileName;
-    }).catch(error => {
-        console.error("Error detecting tempo:", error);
-        showNotification("An unexpected error occurred during tempo detection.");
-        resetToInitialState();
-    });
+function showResult(bpm, filename) {
+    loadingState.classList.add("d-none");
+    initialState.classList.add("d-none");
+    resultState.classList.remove("d-none");
+    bpmResult.textContent = bpm;
+    resultFilename.textContent = filename;
+}
+
+function resetUI() {
+    resultState.classList.add("d-none");
+    loadingState.classList.add("d-none");
+    initialState.classList.remove("d-none");
+    fileInput.value = ""; // Clear the file input
+    notificationArea.innerHTML = ""; // Clear any old notifications
 }
 
 function showNotification(message, type = 'danger') {
-    const wrapper = document.createElement('div');
-    wrapper.innerHTML = [
-        `<div class="alert alert-${type} alert-dismissible fade show" role="alert">`,
-        `   <div>${message}</div>`,
-        '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
-        '</div>'
-    ].join('');
-    notificationArea.innerHTML = ''; // Clear previous messages
-    notificationArea.append(wrapper);
+    const notification = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    `;
+    notificationArea.innerHTML = notification;
 }
 
+// --- Main File Handling Logic ---
+async function handleFile(file) {
+    if (!file.type.startsWith("audio/mpeg")) {
+        showNotification("Error: Please select an MP3 audio file.");
+        return;
+    }
+    notificationArea.innerHTML = ""; // Clear previous errors
+    showLoading(file.name);
+
+    // --- NEW BACKEND-FOCUSED LOGIC ---
+    const formData = new FormData();
+    formData.append('audiofile', file);
+
+    try {
+        const response = await fetch('/api/bpm-detector/analyze-bpm', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Server responded with an error.');
+        }
+
+        const data = await response.json();
+        showResult(data.bpm, file.name);
+
+    } catch (error) {
+        console.error("Error sending file to backend:", error);
+        showNotification(`Error: Could not connect to the analysis server. Please ensure it's running. (${error.message})`);
+        resetUI();
+    }
+
+    /*
+    // --- OLD CLIENT-SIDE LOGIC (COMMENTED OUT) ---
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContext.decodeAudioData(e.target.result, 
+        (buffer) => {
+          getBPM(buffer)
+            .then(bpm => {
+              showResult(bpm, file.name);
+            })
+            .catch(err => {
+              console.error(err);
+              showNotification("Error: Could not process the audio file. It might be corrupted or in an unsupported format.");
+              resetUI();
+            });
+        }, 
+        (error) => {
+          console.error("Error decoding audio data:", error);
+          showNotification("Error: Could not decode the audio file. Please try a different MP3.");
+          resetUI();
+        }
+      );
+    };
+    reader.onerror = () => {
+        console.error("Error reading file");
+        showNotification("Error: There was a problem reading the file.");
+        resetUI();
+    };
+    reader.readAsArrayBuffer(file);
+    */
+}
+
+// --- BPM DETECTION ALGORITHM (Improved) ---
 /**
- * The main function to get the tempo from an AudioBuffer.
- * @param {AudioBuffer} buffer The decoded audio data.
- * @returns {Promise<number>} A promise that resolves with the tempo in BPM.
+ * Processes the audio buffer and returns the calculated BPM.
+ * @param {AudioBuffer} buffer The audio buffer from the decoded file.
+ * @returns {Promise<number>} A promise that resolves with the BPM.
  */
-async function getTempo(buffer) {
-    const sampleRate = buffer.sampleRate;
-    const offlineContext = new OfflineAudioContext(1, buffer.length, sampleRate);
-    const source = offlineContext.createBufferSource();
-    source.buffer = buffer;
+// function getBPM(buffer) {
+//     return new Promise((resolve) => {
+//         // We run this in a promise to not block the main thread,
+//         // though for most modern browsers this is fast enough.
+//         const offlineContext = new OfflineAudioContext(1, buffer.length, buffer.sampleRate);
+//         const source = offlineContext.createBufferSource();
+//         source.buffer = buffer;
 
-    const filter = offlineContext.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 140;
-    filter.Q.value = 1;
+//         // Create a low-pass filter to isolate bass and drums.
+//         // This is a key step to focus on the rhythm.
+//         const filter = offlineContext.createBiquadFilter();
+//         filter.type = "lowpass";
+//         filter.frequency.value = 150; // Keep frequencies below 150Hz
+//         filter.Q.value = 1;
 
-    source.connect(filter);
-    filter.connect(offlineContext.destination);
-    source.start(0);
+//         source.connect(filter);
+//         filter.connect(offlineContext.destination);
 
-    const filteredBuffer = await offlineContext.startRendering();
-    const data = filteredBuffer.getChannelData(0);
-    const peaks = getPeaks(data, sampleRate);
-    const tempo = countIntervalsAndGetBPM(peaks, sampleRate);
+//         source.start(0);
+//         offlineContext.startRendering();
 
-    return tempo;
-}
+//         offlineContext.oncomplete = (e) => {
+//             const filteredBuffer = e.renderedBuffer;
+//             const audioData = filteredBuffer.getChannelData(0);
+//             const peaks = getPeaks(audioData, filteredBuffer.sampleRate);
+//             const intervals = getIntervals(peaks);
+//             const topInterval = groupIntervals(intervals);
+
+//             // Calculate BPM from the most common interval
+//             const bpm = Math.round(60 / topInterval);
+//             resolve(bpm);
+//         };
+//     });
+// }
 
 /**
  * Identifies peaks in the audio data.
- * @param {Float32Array} data The audio data (after filtering).
+ * A "peak" is a point where the signal is louder than its neighbors.
+ * @param {Float32Array} data The audio data.
  * @param {number} sampleRate The sample rate of the audio.
- * @returns {Array<number>} An array of peak positions in samples.
+ * @returns {Array<number>} An array of peak times in seconds.
  */
-function getPeaks(data, sampleRate) {
-    const peaks = [];
-    const threshold = 0.6;
-    const minPeakDistance = sampleRate * 0.1; // 100ms
-    let lastPeak = -Infinity;
+// function getPeaks(data, sampleRate) {
+//     const peaks = [];
+//     const threshold = 0.6; // Dynamic threshold could be an improvement
+//     let lastPeakTime = 0;
 
-    for (let i = 1; i < data.length - 1; i++) {
-        if (data[i] > data[i - 1] && data[i] > data[i + 1] && data[i] > threshold) {
-            if (i - lastPeak > minPeakDistance) {
-                peaks.push(i);
-                lastPeak = i;
-            }
-        }
-    }
-    return peaks;
-}
+//     for (let i = 1; i < data.length - 1; i++) {
+//         // Find a point higher than its neighbors
+//         if (data[i] > data[i - 1] && data[i] > data[i + 1] && data[i] > threshold) {
+//             const peakTime = i / sampleRate;
+//             // Debounce peaks to avoid detecting multiple peaks for a single drum hit
+//             if (peakTime - lastPeakTime > 0.1) { // 100ms debounce
+//                 peaks.push(peakTime);
+//                 lastPeakTime = peakTime;
+//             }
+//         }
+//     }
+//     return peaks;
+// }
 
 /**
- * Counts the intervals between peaks and determines the most likely BPM.
- * @param {Array<number>} peaks Array of peak positions in samples.
- * @param {number} sampleRate The sample rate of the audio.
- * @returns {number} The calculated BPM.
+ * Calculates the time intervals between consecutive peaks.
+ * @param {Array<number>} peaks An array of peak times.
+ * @returns {Array<number>} An array of interval lengths in seconds.
  */
-function countIntervalsAndGetBPM(peaks, sampleRate) {
-    if (peaks.length < 2) {
-        return 0; // Not enough data
-    }
-
-    const intervalCounts = [];
-
-    for (let i = 1; i < peaks.length; i++) {
-        const intervalInSamples = peaks[i] - peaks[i - 1];
-        const intervalInSeconds = intervalInSamples / sampleRate;
-        const bpm = 60 / intervalInSeconds;
-        const tempoGroup = getTempoGroup(bpm);
-
-        if (tempoGroup > 0) {
-            const existingGroup = intervalCounts.find(group => group.tempo === tempoGroup);
-            if (existingGroup) {
-                existingGroup.count++;
-            } else {
-                intervalCounts.push({ tempo: tempoGroup, count: 1 });
-            }
-        }
-    }
-
-    if (intervalCounts.length === 0) {
-        return 0;
-    }
-
-    const bestGroup = intervalCounts.sort((a, b) => b.count - a.count)[0];
-    return bestGroup.tempo;
-}
+// function getIntervals(peaks) {
+//     const intervals = [];
+//     for (let i = 0; i < peaks.length - 1; i++) {
+//         const interval = peaks[i + 1] - peaks[i];
+//         intervals.push(interval);
+//     }
+//     return intervals;
+// }
 
 /**
- * Helper function to group tempos together in a reasonable range (e.g., 70-180 BPM).
- * @param {number} bpm The raw BPM calculated from an interval.
- * @returns {number} The closest "round" tempo, or 0 if out of range.
+ * Groups similar intervals together to find the most common one.
+ * This is the core of making the detection robust.
+ * @param {Array<number>} intervals An array of interval lengths.
+ * @returns {number} The most common interval.
  */
-function getTempoGroup(bpm) {
-    let roundedBpm = Math.round(bpm);
+// function groupIntervals(intervals) {
+//     const intervalGroups = [];
+//     const tempoThreshold = 0.05; // 50ms threshold for grouping
 
-    // Normalize tempo to a typical range
-    while (roundedBpm > 180) roundedBpm /= 2;
-    while (roundedBpm < 70) roundedBpm *= 2;
+//     intervals.forEach(interval => {
+//         let found = false;
+//         for (const group of intervalGroups) {
+//             if (Math.abs(interval - group.interval) < tempoThreshold) {
+//                 group.count++;
+//                 found = true;
+//                 break;
+//             }
+//         }
+//         if (!found) {
+//             intervalGroups.push({ interval: interval, count: 1 });
+//         }
+//     });
 
-    if (roundedBpm >= 70 && roundedBpm <= 180) {
-        return Math.round(roundedBpm);
-    }
-    return 0;
-}
+//     // Find the group with the highest count
+//     if (intervalGroups.length === 0) return 0.5; // Default if no groups found
+
+//     const topGroup = intervalGroups.sort((a, b) => b.count - a.count)[0];
+//     return topGroup.interval;
+// }
