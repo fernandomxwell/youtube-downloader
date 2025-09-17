@@ -25,4 +25,4 @@ COPY . .
 EXPOSE 3000
 
 # Define the command that will be executed when the container starts.
-CMD [ "node", "index.js" ]
+CMD [ "pm2-runtime", "start", "index.js", "-i", "max", "--name", "jinglemax-app" ]
