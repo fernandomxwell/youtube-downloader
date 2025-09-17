@@ -18,6 +18,9 @@ COPY package*.json ./
 # Install only the production dependencies to keep the image small.
 RUN npm install --production
 
+# Install PM2 globally to manage the application process.
+RUN npm install pm2 -g
+
 # Copy the rest of your application's source code into the container.
 COPY . .
 
