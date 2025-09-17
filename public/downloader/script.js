@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatSelect = document.getElementById('format-select');
     const qualitySelect = document.getElementById('quality-select');
     const downloadBtn = document.getElementById('download-btn');
-    const resetBtn = document.getElementById('reset-btn');
+    const refreshBtn = document.getElementById('reset-btn');
 
     let videoFormats = [];
     let videoTitle = '';
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!url) return showError('Please paste a YouTube URL.');
 
         downloadOptions.classList.add('d-none');
+        refreshBtn.classList.add('d-none');
         hideError();
         loaderContainer.classList.remove('d-none');
         processingMessage.textContent = '';
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             videoThumbnailElem.src = data.thumbnailUrl;
             populateQualities();
             downloadOptions.classList.remove('d-none');
+            refreshBtn.classList.remove('d-none');
         } catch (err) {
             showError(err.message);
         } finally {
@@ -95,6 +97,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    refreshBtn.addEventListener('click', () => {
+        urlInput.value = '';
+        downloadOptions.classList.add('d-none');
+        refreshBtn.classList.add('d-none');
+        hideError();
+        videoFormats = [];
+        videoTitle = '';
+        validatedUrl = '';
+        processingMessage.textContent = '';
+        setControlsDisabled(false);
+    });
+
     function populateQualities() {
         qualitySelect.innerHTML = '';
         const selectedFormat = formatSelect.value;
@@ -109,7 +123,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 return false;
             }).sort((a, b) => parseInt(b.qualityLabel) - parseInt(a.qualityLabel));
         } else {
-            filteredFormats = videoFormats.filter(f => !f.hasVideo && f.hasAudio).sort((a, b) => b.audioBitrate - a.audioBitrate);
+            const uniqueBitrates = {};
+            filteredFormats = videoFormats
+                .filter(f => f.hasAudio && !f.hasVideo)
+                .sort((a, b) => b.audioBitrate - a.audioBitrate)
+                .filter(f => {
+                    if (!uniqueBitrates[f.audioBitrate]) {
+                        uniqueBitrates[f.audioBitrate] = true;
+                        return true;
+                    }
+                    return false;
+                });
         }
         if (filteredFormats.length === 0) {
             qualitySelect.innerHTML = '<option>No options available</option>';
@@ -129,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
         urlInput.disabled = isDisabled;
         getInfoBtn.disabled = isDisabled;
         downloadBtn.disabled = isDisabled;
-        resetBtn.disabled = isDisabled;
+        refreshBtn.disabled = isDisabled;
     }
 
     function showError(message) { errorMessage.textContent = message; errorMessage.classList.remove('d-none'); }
